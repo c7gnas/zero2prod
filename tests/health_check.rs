@@ -1,6 +1,8 @@
 //! tests/health_check.rs
 
 use std::net::TcpListener;
+
+//use reqwest::Client;
 // `tokio::test` is the testing equivalent of `tokio::main`.
 // It also spares you from having to specify the `#[test]` attribute.
 //
@@ -39,4 +41,55 @@ fn spawn_app() -> String {
     // but we have no use for it here, hence the non-binding let
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
-} 
+}
+
+#[tokio::test]
+async fn subscribe_returns_a_200_for_valid_form_data() {
+    //arange
+    let app_address = spawn_app();
+    let client = reqwest::Client::new();
+
+    //act
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    let response = client
+        .post(&format!("{}/subscriptions", &app_address))
+        .header("content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .expect("failed to exceute request");
+
+    //assert
+    assert_eq!(200, response.status().as_u16());
+}
+
+#[tokio::test]
+async fn subscribe_returns_400_when_data_is_missing() {
+    //arange
+    let app_address = spawn_app();
+    let client = reqwest::Client::new();
+    let test_case = vec![
+        ("name=le%20guin", "missing the email"),
+        ("email=ursula_le_guin%40gmail.com", "missing the name"),
+        ("", "missing the name adn email both"),
+    ];
+
+    for (invalid_body, error_message) in test_case {
+        //act
+        let response = client
+            .post(&format!("{}/subscriptions", &app_address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("failed to execute request");
+
+        //assert
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "the API did not dail with 400 bad request whjen the payload was {}",
+            error_message
+        );
+    }
+}
