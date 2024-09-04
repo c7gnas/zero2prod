@@ -2,6 +2,7 @@
 set -x
 set -eo pipefail
 
+
 #check if a custom user ahs been set, else default to postgres
 DB_USER=${POSTGRES_USER:=postgres}
 # Check if a custom password has been set, otherwise default to 'password'
@@ -18,5 +19,9 @@ docker run \
 -e POSTGRES_DB=${DB_NAME} \
 -p "${DB_PORT}":5432 \
 -d postgres \
-potgres -N 1000
+postgres -N 1000
 #increased max number of connections for testing purposes
+
+
+export DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/newsletter
+sqlx database create
